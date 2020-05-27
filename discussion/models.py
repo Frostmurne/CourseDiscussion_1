@@ -1,7 +1,6 @@
 from django.db import models
 
 
-# Create your models here.
 class Tag(models.Model):
     name = models.CharField(max_length=20)
 
@@ -27,10 +26,7 @@ class Answer(models.Model):
     create_at = models.DateTimeField(auto_now_add=True)
 
 
-
 class Comment(models.Model):
     message = models.CharField(max_length=1000)
     answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='comments')
     create_at = models.DateTimeField(auto_now_add=True)
-
-

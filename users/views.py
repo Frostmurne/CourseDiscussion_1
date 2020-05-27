@@ -1,25 +1,29 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import reverse
-from django.http import HttpResponseRedirect
+from oauth2_provider.views.generic import ProtectedResourceView
+from django.http import HttpResponse
 from django.contrib.auth import authenticate
+from furl import furl
+from django.http import HttpResponseRedirect
 from .forms import UserForm
-from django.contrib.auth.forms import UserCreationForm
-from . forms import UserForm
 from . import models
+import hashlib
+import requests
 # Create your views here.
 def logout(request):
     """注销账户"""
     if not request.session.get('is_login', None):
         # 如果本来就未登录
-        return HttpResponseRedirect(reverse('search:index'))
+        return HttpResponseRedirect(reverse('home:homepage'))
     request.session.flush()
-    return HttpResponseRedirect(reverse('search:index'))
+    return HttpResponseRedirect(reverse('home:homepage'))
+
 
 def register(request):
     """注册新用户"""
     if request.session.get('is_login', None):
         # 登录状态不允许注册
-        HttpResponseRedirect(reverse('search:index'))
+        HttpResponseRedirect(reverse('home:homepage'))
     if request.method == "POST":
         register_form = models.RegisterForm(request.POST)
         message = "请检查填写的内容！"
@@ -45,20 +49,24 @@ def register(request):
                 # 当一切都OK的情况下，创建新用户
                 new_user = models.User.objects.create()
                 new_user.name = username
-                new_user.password = password1
+                new_user.password = hash_code(password1)  # 使用加密密码
                 new_user.email = email
                 new_user.sex = sex
                 new_user.institute = institute
                 new_user.save()
-                return HttpResponseRedirect(reverse('users:users/login'))  # 自动跳转到登录页面
+                return redirect('users:login')  # 自动跳转到登录页面
     register_form = models.RegisterForm()
     return render(request, 'users/register.html', locals())
 
+
 def login(request):
     if request.session.get('is_login', None):
-        return HttpResponseRedirect(reverse('search:index'))
+        return redirect('home:homepage')
 
-    if request.method == "POST":
+    login_form = UserForm()
+    if request.method != 'POST':
+        print('1')
+    else:
         login_form = UserForm(request.POST)
         message = "请检查填写的内容！"
         if login_form.is_valid():
@@ -66,16 +74,52 @@ def login(request):
             password = login_form.cleaned_data['password']
             try:
                 user = models.User.objects.get(name=username)
-                if user.password == password:
+                if user.password == hash_code(password):
                     request.session['is_login'] = True
                     request.session['user_id'] = user.id
                     request.session['user_name'] = user.name
-                    return HttpResponseRedirect(reverse('search:index'))
+                    return HttpResponseRedirect(reverse('home:homepage'))
                 else:
                     message = "密码不正确！"
             except:
                 message = "用户不存在！"
         return render(request, 'users/login.html', locals())
 
-    login_form = UserForm()
     return render(request, 'users/login.html', locals())
+
+
+def process(request):
+    f = furl(request.get_full_path())
+    code = f.args['code']
+    url='https://jaccount.sjtu.edu.cn/oauth2/token'
+    client_id='sPu9ghxQjehvRUzH9SuY'
+    client_secret='B0163EAEC431290BBA79D53246C861A76D9B51D692B08389'
+    grant_type='authorization_code'
+    redirect_uri='https://example-app.com/redirect'
+    data={
+        'grant_type':grant_type,
+        'code':code,
+        'client_id':client_id,
+        'client_secret':client_secret,
+        'redirect_uri':redirect_uri
+    }
+    result=requests.post(url,data)
+    print(result.text)
+    return HttpResponse('登录成功，正在跳转')
+
+def personalpage(request):
+    if not request.session.get('is_login', None):
+        # 如果本来未登录,则返回主页
+        return HttpResponseRedirect(reverse('home:homepage'))
+    context = {'user_name': request.user.username,
+               'user_email': request.user.email,
+               # 'user_sex':request.user.sex,
+               }
+    return render(request, 'users/personalpage.html', context)
+
+def hash_code(s, salt='mysite'):
+    h = hashlib.sha256()
+    s += salt
+    h.update(s.encode())  # update方法只接收bytes类型
+    return h.hexdigest()
+

@@ -1,0 +1,6 @@
+# CoursesDiscussion
+
+_pycache__/
+.idea/
+venv/pyvenv.cfg
+
