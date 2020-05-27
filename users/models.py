@@ -1,6 +1,6 @@
 from django.db import models
 from django import forms
-from captcha.fields import CaptchaField
+#from captcha.fields import CaptchaField
 
 
 # Create your models here.
@@ -41,7 +41,7 @@ class RegisterForm(forms.Form):
                                 widget=forms.PasswordInput(attrs={'class': 'form-control'}))
     email = forms.EmailField(label="邮箱地址", widget=forms.EmailInput(attrs={'class': 'form-control'}))
     sex = forms.ChoiceField(label='性别', choices=gender)
-    captcha = CaptchaField(label='验证码')
+#    captcha = CaptchaField(label='验证码')
     institute = forms.ChoiceField(label='学院', choices=institute)
 
 class User(models.Model):

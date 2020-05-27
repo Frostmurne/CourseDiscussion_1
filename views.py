@@ -95,9 +95,14 @@ class SearchView(object):
         #print(list(self.form.search()))
 
         x = []
+        get_data = ""
+        gt_data = ""
         for result in self.form.search():
-            if result.object.institute == self.request.GET["institute"] :
+            get_data = self.request.GET["institute"]
+            gt_data = self.request.GET["year"]
+            if (result.object.institute == get_data or get_data == "请选择") and (result.object.semester == gt_data or gt_data == "请选择"):
               x.append(result)
+
         return x
 
     def build_page(self):
@@ -146,6 +151,7 @@ class SearchView(object):
             "paginator": paginator,
             "suggestion": None,
             "institute":self.request.GET["institute"],
+            "year":self.request.GET["year"],
         }
 
         if (
